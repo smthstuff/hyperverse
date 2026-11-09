@@ -1,0 +1,65 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+  repository_dispatch:
+    types: [ build, trigger-build ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pipeline:
+    name: Build & Release Pipeline
+    runs-on: ubuntu-26.04
+
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v7
+        with:
+          repository: 'hieuxyz00/hyperverse'
+          token: ${{ secrets.PRIVATE_REPO_TOKEN }}
+          fetch-depth: 1
+
+      - name: Setup Tools
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Setup Java Toolchain
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Setup Java Runtime
+        uses: actions/setup-java@v6
+        with:
+          java-version: '25'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: '9.9.0'
+
+      - name: Execute Pipeline
+        run: |
+          chmod +x .ci/build.sh
+          ./.ci/build.sh
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: artifacts
+          path: build/libs/*.jar
+          if-no-files-found: ignore
+          retention-days: 14
