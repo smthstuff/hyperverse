@@ -4,11 +4,20 @@ on:
   push:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      repository:
+        description: 'Target private repository to build'
+        required: false
+        default: 'hieuxyz00/hyperverse'
+      branch:
+        description: 'Branch to checkout'
+        required: false
+        default: 'main'
   repository_dispatch:
     types: [ build, trigger-build ]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.client_payload.repository || github.event.inputs.repository || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -17,10 +26,20 @@ jobs:
     runs-on: ubuntu-26.04
 
     steps:
+      - name: Resolve Target Repository
+        id: resolve
+        run: |
+          TARGET_REPO="${{ github.event.client_payload.repository || github.event.inputs.repository || 'hieuxyz00/hyperverse' }}"
+          TARGET_REF="${{ github.event.client_payload.branch || github.event.inputs.branch || 'main' }}"
+          echo "repo=$TARGET_REPO" >> "$GITHUB_OUTPUT"
+          echo "ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
+          echo "Target repository: $TARGET_REPO (ref: $TARGET_REF)"
+
       - name: Checkout Source
         uses: actions/checkout@v7
         with:
-          repository: 'hieuxyz00/hyperverse'
+          repository: ${{ steps.resolve.outputs.repo }}
+          ref: ${{ steps.resolve.outputs.ref }}
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           fetch-depth: 1
 
