@@ -35,6 +35,10 @@ jobs:
           echo "ref=$TARGET_REF" >> "$GITHUB_OUTPUT"
           echo "Target repository: $TARGET_REPO (ref: $TARGET_REF)"
 
+      - name: Configure Git
+        # actions/checkout runs `git init`; set the default branch so it does not print the 'master' hint.
+        run: git config --global init.defaultBranch main
+
       - name: Checkout Source
         uses: actions/checkout@v7
         with:
@@ -43,15 +47,19 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           fetch-depth: 1
 
-      - name: Setup Tools
-        uses: pnpm/action-setup@v6
-        with:
-          version: 10
-
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
           node-version: 22
+
+      - name: Setup pnpm
+        # Corepack installs exactly the pnpm pinned in web/package.json ("packageManager").
+        # pnpm/action-setup bootstrapped pnpm v11 and downgraded it, which printed a PNPM_HOME layout warning.
+        run: |
+          PM="$(node -p "require('./web/package.json').packageManager")"
+          corepack enable
+          corepack install --global "$PM"
+          pnpm --version
 
       - name: Setup Java Toolchain
         uses: actions/setup-java@v6
