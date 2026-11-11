@@ -53,12 +53,11 @@ jobs:
           node-version: 22
 
       - name: Setup pnpm
-        # Corepack installs exactly the pnpm pinned in web/package.json ("packageManager").
-        # pnpm/action-setup bootstrapped pnpm v11 and downgraded it, which printed a PNPM_HOME layout warning.
+        # Installs exactly the pnpm pinned in web/package.json ("packageManager", e.g. pnpm@12.18.0).
+        # pnpm/action-setup bootstrapped another major and switched versions, printing a PNPM_HOME warning.
         run: |
-          PM="$(node -p "require('./web/package.json').packageManager")"
-          corepack enable
-          corepack install --global "$PM"
+          PM="$(node -p "require('./web/package.json').packageManager.split('+')[0]")"
+          npm install --global --no-fund --no-audit "$PM"
           pnpm --version
 
       - name: Setup Java Toolchain
